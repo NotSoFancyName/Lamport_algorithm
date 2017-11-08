@@ -7,6 +7,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 /**
  * Created by Вова on 28.10.2017.
  */
@@ -25,7 +27,7 @@ interface FixnumLock extends Lock {
 public class BakeryLock implements FixnumLock{
 
     private final int maximumSize = 100;                                        // threads' quantity limit
-    private HashMap<Long,Integer> localThreadId = new HashMap<>();              // Threads' ids corresponds local thread's
+    private HashMap<Long,Integer> localThreadId = new HashMap<>();              //
     private List<Long> threadTickets = new ArrayList<>(maximumSize);            // Threads' tickets
     private List<Boolean> enteringThread = new ArrayList<>(maximumSize);        // Threads entering critical zone
     private long size = 0;                                                      // current threads size
@@ -44,7 +46,7 @@ public class BakeryLock implements FixnumLock{
     }
 
     @Override
-    public void register() {
+    synchronized public void register() {
         if(size == maximumSize) return;
 
         int i = 0;
@@ -57,7 +59,7 @@ public class BakeryLock implements FixnumLock{
     }
 
     @Override
-    public void unregister() {
+    synchronized public void unregister() {
         localThreadId.remove(Thread.currentThread().getId());
         size--;
     }
@@ -173,13 +175,8 @@ public class BakeryLock implements FixnumLock{
     @Override
     public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
 
-        long startTime;
-
-        switch (unit) {
-            case MILLISECONDS :startTime = System.currentTimeMillis();
-            case NANOSECONDS: startTime = System.nanoTime();
-            default: startTime = System.nanoTime();
-        }
+        long startTime = System.currentTimeMillis();
+        long waitingTime = TimeUnit.MILLISECONDS.convert(time, unit);
 
         int curId = getId();
         enteringThread.set(curId,true);
@@ -202,10 +199,8 @@ public class BakeryLock implements FixnumLock{
 
             while(enteringThread.get(i)){
 
-                switch (unit) {
-                    case MILLISECONDS : if(System.currentTimeMillis() - startTime > time)return false;
-                    case NANOSECONDS: if(System.nanoTime() - startTime > time) return false;
-                }
+                if(System.currentTimeMillis() - startTime > waitingTime)return false;
+                if(Thread.interrupted()) return false;
 
                 Thread.yield();
             }
@@ -214,11 +209,9 @@ public class BakeryLock implements FixnumLock{
                     ( threadTickets.get(curId) > threadTickets.get(i)  ||
                             (Objects.equals(threadTickets.get(curId), threadTickets.get(i)) && curId > i))){
 
-                switch (unit) {
-                    case MILLISECONDS : if(System.currentTimeMillis() - startTime > time)return false;
-                    case NANOSECONDS: if(System.nanoTime() - startTime > time) return false;
-                }
+                if(System.currentTimeMillis() - startTime > waitingTime)return false;
 
+                if(Thread.interrupted()) return false;
                 Thread.yield();
             }
         }
@@ -243,21 +236,35 @@ class BackeryLockCondition implements Condition{
 
     @Override
     public void await() throws InterruptedException {
-
+        synchronized (this) {
+            this.wait();
+        }
     }
 
     @Override
     public void awaitUninterruptibly() {
-
+        try {
+            synchronized (this) {
+                this.wait();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public long awaitNanos(long nanosTimeout) throws InterruptedException {
-        return 0;
+        synchronized (this) {
+            this.wait(TimeUnit.MICROSECONDS.convert(nanosTimeout, NANOSECONDS));
+        }
+        return nanosTimeout;
     }
 
     @Override
     public boolean await(long time, TimeUnit unit) throws InterruptedException {
+        synchronized (this) {
+            this.wait(TimeUnit.MICROSECONDS.convert(time, unit));
+        }
         return false;
     }
 
@@ -268,114 +275,15 @@ class BackeryLockCondition implements Condition{
 
     @Override
     public void signal() {
-
+        synchronized (this) {
+            this.notify();
+        }
     }
 
     @Override
     public void signalAll() {
-
+        synchronized (this) {
+            this.notifyAll();
+        }
     }
 }
-
-/*
-
-public class BakeryLock implements  FixnumLock {
-
-    private long currentThreadId = -1;                  // current thread that aquiered a lock
-    private HashMap<Long,Integer> threadTickets;
-    private HashMap<Long,Boolean> enteringThread;
-    private Integer maximumTicketValue;
-
-    private final int maximumQuantity = 100;
-    private int threadQuantity = 0;
-
-    public BakeryLock(){
-        threadTickets = new HashMap<>();
-        enteringThread = new HashMap<>();
-        maximumTicketValue = 0;
-    }
-
-    @Override
-    public long getId() {
-        return currentThreadId;
-    }
-
-    @Override
-    public void register() {
-        if(threadQuantity != maximumQuantity) {
-            threadTickets.put(Thread.currentThread().getId(), 0);
-            enteringThread.put(Thread.currentThread().getId(), false);
-            threadQuantity++;
-        }
-    }
-
-    @Override
-    public void unregister() {
-        if(threadTickets.remove(Thread.currentThread().getId(),0)){
-            threadQuantity--;
-            enteringThread.remove(Thread.currentThread().getId());
-        }
-    }
-
-    @Override
-    public void lock() {
-
-        long CurrentId = Thread.currentThread().getId();
-
-        if(threadTickets.containsKey(CurrentId)){
-
-            enteringThread.replace(CurrentId, true);
-            threadTickets.replace(CurrentId, ++maximumTicketValue);
-            enteringThread.replace(CurrentId, false);
-
-            for (Map.Entry<Long, Boolean> entry : enteringThread.entrySet())
-            {
-                while(entry.getValue()){
-                    Thread.yield();
-                }
-
-                while ((threadTickets.get(entry.getKey()) != 0) && compareThreads(CurrentId, entry.getKey())){
-                    Thread.yield();
-                }
-            }
-        }
-
-
-    }
-
-    @Override
-    public void lockInterruptibly() throws InterruptedException {
-
-    }
-
-    @Override
-    public boolean tryLock() {
-        return false;
-    }
-
-    @Override
-    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-        return false;
-    }
-
-    @Override
-    public void unlock() {
-        threadTickets.replace(Thread.currentThread().getId(), 0);
-    }
-
-    @Override
-    public Condition newCondition() {
-        return null;
-    }
-
-    // check threads priority
-    private boolean compareThreads(Long id1, Long id2){
-
-        if(threadTickets.get(id1) > threadTickets.get(id2))
-            return true;
-        else if(threadTickets.get(id1) < threadTickets.get(id2))
-            return false;
-        else
-            return (id1 > id2);
-    }
-}*/

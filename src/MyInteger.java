@@ -5,16 +5,16 @@ public class MyInteger {
 
     private Integer i;
 
-    public MyInteger(){
+    MyInteger(){
         i = 0;
     }
 
     public void inc(){
-        i--;
+        i++;
     }
 
     public void dec(){
-        i++;
+        i--;
     }
 
     public Integer getInt(){

@@ -227,18 +227,29 @@ public class BakeryLock implements FixnumLock{
 
     @Override
     public Condition newCondition() {
-        return new BackeryLockCondition();
+        return new BackeryLockCondition(this);
     }
+
 }
 
 
 class BackeryLockCondition implements Condition{
 
+    private BakeryLock lock;
+
+    BackeryLockCondition(BakeryLock lock){
+        this.lock = lock;
+    }
+
+
     @Override
     public void await() throws InterruptedException {
+
+        lock.unlock();
         synchronized (this) {
             this.wait();
         }
+        lock.lock();
     }
 
     @Override

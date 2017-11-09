@@ -29,6 +29,7 @@ public class DecrementThread implements Runnable {
             e.printStackTrace();
         }
 
+
         while(true){
             lock.lock();
             counter.dec();

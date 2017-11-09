@@ -31,6 +31,7 @@ public class IncrementThread implements Runnable {
             e.printStackTrace();
         }
 
+
         while(true){
 
             lock.lock();

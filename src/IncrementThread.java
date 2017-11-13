@@ -12,12 +12,15 @@ public class IncrementThread implements Runnable {
     private BakeryLock lock;
     private MyInteger counter;
     private  CyclicBarrier barrier;
+    private int a;
 
 
-    public IncrementThread(MyInteger counter,BakeryLock lock, CyclicBarrier barrier){
+
+    public IncrementThread(MyInteger counter,BakeryLock lock, CyclicBarrier barrier, int a){
         this.lock = lock;
         this.counter = counter;
         this.barrier = barrier;
+        this.a = a;
     }
 
     @Override
@@ -35,7 +38,7 @@ public class IncrementThread implements Runnable {
         while(true){
 
             lock.lock();
-            counter.inc();
+            counter.plus(a);
             lock.unlock();
         }
         //lock.unregister();

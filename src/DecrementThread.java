@@ -12,7 +12,7 @@ public class DecrementThread implements Runnable {
     private  CyclicBarrier barrier;
 
 
-    public DecrementThread(MyInteger counter,BakeryLock lock, CyclicBarrier barrier){
+    public DecrementThread(MyInteger counter,BakeryLock lock, CyclicBarrier barrier, int a){
         this.lock = lock;
         this.counter = counter;
         this.barrier = barrier;

@@ -3,6 +3,7 @@ import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -28,8 +29,8 @@ public class BakeryLock implements FixnumLock{
 
     private final int maximumSize = 100;                                        // threads' quantity limit
     private HashMap<Long,Integer> localThreadId = new HashMap<>();              //
-    private List<Long> threadTickets = new ArrayList<>(maximumSize);            // Threads' tickets
-    private List<Boolean> enteringThread = new ArrayList<>(maximumSize);        // Threads entering critical zone
+    private CopyOnWriteArrayList<Long> threadTickets = new CopyOnWriteArrayList<>();            // Threads' tickets
+    private CopyOnWriteArrayList<Boolean> enteringThread = new CopyOnWriteArrayList<>();        // Threads entering critical zone
     private long size = 0;                                                      // current threads size
 
 
@@ -87,13 +88,13 @@ public class BakeryLock implements FixnumLock{
         for(int i = 0; i < size; i++){
 
             while(enteringThread.get(i)){
-                Thread.yield();
+
             }
 
             while( threadTickets.get(i) != 0  &&
                     ( threadTickets.get(curId) > threadTickets.get(i)  ||
-                    (Objects.equals(threadTickets.get(curId), threadTickets.get(i)) && curId > i))){
-                Thread.yield();
+                            (Objects.equals(threadTickets.get(curId), threadTickets.get(i)) && curId > i))){
+
             }
         }
     }

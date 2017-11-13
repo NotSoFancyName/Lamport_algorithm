@@ -21,10 +21,10 @@ public class LamportAlgorithm {
     public static void main(String args[]){
 
         MyInteger poorCounter = new MyInteger();
-        Thread t1 = new Thread(new IncrementThread(poorCounter,lock,barrier));
-        Thread t2 = new Thread(new DecrementThread(poorCounter,lock,barrier));
-        Thread t3 = new Thread(new IncrementThread(poorCounter,lock,barrier));
-        Thread t4 = new Thread(new DecrementThread(poorCounter,lock,barrier));
+        Thread t1 = new Thread(new IncrementThread(poorCounter,lock,barrier,2));
+        Thread t2 = new Thread(new IncrementThread(poorCounter,lock,barrier,-1));
+        Thread t3 = new Thread(new IncrementThread(poorCounter,lock,barrier,-1));
+        Thread t4 = new Thread(new IncrementThread(poorCounter,lock,barrier,0));
 
         t1.start();
         t2.start();
@@ -42,12 +42,15 @@ public class LamportAlgorithm {
 
         while(true) {
             try {
-                sleep(100);
+                sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            System.out.print(" " + poorCounter.getInt());
+            System.out.println("Cunter : " + poorCounter.getInt());
+            System.out.println("decremented : " + poorCounter.getDecremented());
+            System.out.println("incremented : " + poorCounter.getIncremented() + '\n');
+
         }
     }
 }
